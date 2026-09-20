@@ -12,8 +12,9 @@
     "verify:report": "tsx scripts/verify-report.mts"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^153.0.0",
     "next": "16.3.5",
-    "playwright": "^1.63.0",
+    "playwright-core": "^1.63.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "seedrandom": "^3.0.5"
@@ -30,5 +31,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5"
   },
-  "description": "Website chaos engineering playground"
+  "description": "Website chaos engineering playground",
+  "engines": {
+    "node": "22.x"
+  }
 }

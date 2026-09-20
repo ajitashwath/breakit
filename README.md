@@ -10,7 +10,7 @@ Website chaos engineering. Point it at a URL, turn up the failure, see what surv
 
 ```bash
 npm install
-npx playwright install chromium
+npx playwright-core install chromium
 npm run dev        # http://localhost:3000
 ```
 
@@ -25,7 +25,7 @@ The survival % is a documented heuristic, not a measurement: see `lib/chaos/repo
 
 ```bash
 npm install
-npx playwright install chromium
+npx playwright-core install chromium
 
 # Prove every rule works against a local fixture site (about 45 s)
 npm run verify:engine

@@ -1,10 +1,19 @@
-import { EngineError, runExperiment } from "@/lib/chaos/engine";
+import { EngineError, ON_VERCEL, runExperiment } from "@/lib/chaos/engine";
 import { buildReport } from "@/lib/chaos/report";
 import { normalizeTargetUrl } from "@/lib/chaos/url";
 import type { RunError, RunRequest, RunResponse } from "@/lib/api";
 
 // Playwright needs a long-lived Node process, not the edge runtime.
 export const runtime = "nodejs";
+
+// A run is warm-up + baseline + chaos, each a real page load. 60 s is the most
+// every Vercel plan allows; raise it (up to 300) on plans that do.
+export const maxDuration = 60;
+
+// On Vercel the whole run must fit in maxDuration (cold start ~5 s, then three
+// passes), so each pass gets a tight budget. A page that can't load inside it
+// under chaos is reported as "never finished", which is a real answer.
+const BUDGET = ON_VERCEL ? { timeoutMs: 14_000, settleMs: 3_000 } : {};
 
 // Each run owns a whole Chromium. Refuse to pile them up.
 const MAX_CONCURRENT = 2;
@@ -43,6 +52,7 @@ export async function POST(request: Request) {
       url,
       config: body.config ?? {},
       seed: body.seed,
+      ...BUDGET,
       // If the client goes away, close the browser instead of finishing a run nobody will read.
       signal: request.signal,
     });

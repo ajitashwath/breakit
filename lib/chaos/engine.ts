@@ -1,4 +1,4 @@
-import { chromium, type Browser, type Request as PwRequest } from "playwright";
+import { chromium, type Browser, type Request as PwRequest } from "playwright-core";
 import { NO_CHAOS, normalizeConfig } from "./config";
 import { chance, newSeed, roll } from "./rng";
 import { isNetworkUrl, isThirdParty, normalizeTargetUrl } from "./url";
@@ -82,6 +82,7 @@ export async function runExperiment(opts: RunOptions): Promise<ExperimentResult>
         label: "baseline",
         config: NO_CHAOS,
         settleMs: 1_500,
+        timeoutMs: Math.min(shared.timeoutMs, 15_000), // a warm-up must never eat the budget
         warm: true,
         onEvent: undefined,
       });
@@ -115,17 +116,33 @@ export async function runExperiment(opts: RunOptions): Promise<ExperimentResult>
   }
 }
 
+/** Vercel sets this at runtime. There is no installed browser there. */
+export const ON_VERCEL = Boolean(process.env.VERCEL);
+
+/** Serverless flags that would make the browser behave unlike a real user's. */
+const UNREALISTIC_FLAGS = ["--disable-web-security", "--allow-running-insecure-content"];
+
 async function launch(): Promise<Browser> {
   try {
+    if (ON_VERCEL) {
+      // A compressed Chromium build shipped with the function, unpacked into /tmp.
+      const { default: serverless } = await import("@sparticuz/chromium");
+      return await chromium.launch({
+        executablePath: await serverless.executablePath(),
+        args: serverless.args.filter((a) => !UNREALISTIC_FLAGS.includes(a)),
+        headless: true,
+      });
+    }
     return await chromium.launch({ headless: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (/Executable doesn't exist|browserType\.launch/.test(msg)) {
+    const msg = firstLine(err);
+    if (!ON_VERCEL && /Executable doesn't exist/.test(msg)) {
       throw new EngineError(
-        "Chromium is not installed for Playwright. Run: npx playwright install chromium",
+        "Chromium is not installed for Playwright. Run: npx playwright-core install chromium",
       );
     }
-    throw err;
+    // Say what actually went wrong instead of an empty 500.
+    throw new EngineError(`Could not start the browser: ${msg}`);
   }
 }
 
