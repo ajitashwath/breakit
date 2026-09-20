@@ -50,12 +50,16 @@ interface PassOptions {
 export class EngineError extends Error {}
 
 /**
- * One experiment = one browser, two isolated contexts (baseline, then chaos).
+ * One experiment = three passes (warm-up, baseline, chaos), each in its own
+ * freshly launched browser and isolated context.
  *
- * Two contexts rather than one because a shared context would let the baseline
- * warm the HTTP cache and make the chaos pass look faster than it is. Every
- * context is closed in `finally`, and so is the browser, so a failed run never
- * leaks a Chromium process.
+ * Isolated contexts because a shared one would let the baseline warm the HTTP
+ * cache and make the chaos pass look faster than it is. A fresh *browser* per
+ * pass because the serverless Chromium build runs single-process, where
+ * closing one pass's context can take the whole browser down and break the
+ * next pass ("Target page, context or browser has been closed" on Vercel).
+ * Launching again is cheap: the unpacked binary is reused. Every browser is
+ * closed in `finally`, so a failed run never leaks a Chromium process.
  */
 export async function runExperiment(opts: RunOptions): Promise<ExperimentResult> {
   const url = normalizeTargetUrl(opts.url);
@@ -71,13 +75,37 @@ export async function runExperiment(opts: RunOptions): Promise<ExperimentResult>
     onEvent: opts.onEvent,
   };
 
-  const browser = await launch();
-  const onAbort = () => void browser.close().catch(() => {});
+  let current: Browser | null = null;
+  const onAbort = () => void current?.close().catch(() => {});
   opts.signal?.addEventListener("abort", onAbort, { once: true });
+
+  /** Runs one pass in its own browser. `name` only labels errors. */
+  const pass = async (name: string, o: PassOptions) => {
+    if (opts.signal?.aborted) throw new EngineError("The run was cancelled.");
+    const browser = await launch();
+    current = browser;
+    try {
+      return await runPass(browser, o);
+    } catch (err) {
+      if (opts.signal?.aborted) throw new EngineError("The run was cancelled.");
+      // A dead browser (out of memory, renderer crash) surfaces as this error
+      // from whatever call happened to be in flight. Say which pass it was.
+      if (/Target page, context or browser has been closed|Browser has been closed|browser has disconnected/i.test(firstLine(err))) {
+        throw new EngineError(
+          `The browser crashed during the ${name} pass. The page may be too heavy for this server.`,
+        );
+      }
+      throw err;
+    } finally {
+      current = null;
+      await browser.close().catch(() => {});
+    }
+  };
+
   try {
     if (opts.warmup !== false) {
       emit(opts.onEvent, { type: "phase", phase: "warmup" });
-      await runPass(browser, {
+      await pass("warm-up", {
         ...shared,
         label: "baseline",
         config: NO_CHAOS,
@@ -89,7 +117,7 @@ export async function runExperiment(opts: RunOptions): Promise<ExperimentResult>
     }
 
     emit(opts.onEvent, { type: "phase", phase: "baseline" });
-    const baseline = await runPass(browser, { ...shared, label: "baseline", config: NO_CHAOS });
+    const baseline = await pass("baseline", { ...shared, label: "baseline", config: NO_CHAOS });
     if (baseline.result.navigationError) {
       throw new EngineError(
         `Could not load ${url} even without chaos: ${describeNavError(baseline.result.navigationError)}`,
@@ -97,7 +125,7 @@ export async function runExperiment(opts: RunOptions): Promise<ExperimentResult>
     }
 
     emit(opts.onEvent, { type: "phase", phase: "chaos" });
-    const chaos = await runPass(browser, { ...shared, label: "chaos", config });
+    const chaos = await pass("chaos", { ...shared, label: "chaos", config });
 
     emit(opts.onEvent, { type: "phase", phase: "done" });
     return {
@@ -112,7 +140,6 @@ export async function runExperiment(opts: RunOptions): Promise<ExperimentResult>
     };
   } finally {
     opts.signal?.removeEventListener("abort", onAbort);
-    await browser.close().catch(() => {});
   }
 }
 
