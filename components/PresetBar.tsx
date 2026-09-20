@@ -24,7 +24,7 @@ export function PresetBar({ active, onPick, onRandom }: Props) {
           {PRESETS[name].label}
         </button>
       ))}
-      <span aria-hidden className="mx-2 hidden h-4 w-px bg-line sm:block" />
+      <span aria-hidden className="mx-2 hidden h-4 w-px bg-line lg:block" />
       <button type="button" className="chip" onClick={onRandom}>
         Random
       </button>

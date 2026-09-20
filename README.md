@@ -2,8 +2,24 @@
 
 Website chaos engineering. Point it at a URL, turn up the failure, see what survives.
 
-> Status: Phase 1 (chaos engine) is complete and verified. The config screen exists;
-> running experiments from the UI, the report, live streaming and the CLI come next.
+> Status: engine, report generator, config screen, synchronous run API and report view
+> work end to end. Not built yet: live WebSocket stream, request waterfall, dependency
+> graph, CLI.
+
+## Run the app
+
+```bash
+npm install
+npx playwright install chromium
+npm run dev        # http://localhost:3000
+```
+
+Type a URL, pick a preset or drag the sliders, hit **Break it**. A run takes 10–30 s
+(warm-up, baseline, chaos) and ends in the report. `POST /api/run` is the same thing as JSON.
+Machine-specific paths (Playwright browser dir, temp) go in `.env.local`, which is gitignored.
+
+The survival % is a documented heuristic, not a measurement: see `lib/chaos/report.ts`.
+`npm run verify:report` pins down its edge cases.
 
 ## Try the engine
 

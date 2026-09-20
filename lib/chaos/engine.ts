@@ -91,7 +91,7 @@ export async function runExperiment(opts: RunOptions): Promise<ExperimentResult>
     const baseline = await runPass(browser, { ...shared, label: "baseline", config: NO_CHAOS });
     if (baseline.result.navigationError) {
       throw new EngineError(
-        `Could not load ${url} even without chaos: ${baseline.result.navigationError}`,
+        `Could not load ${url} even without chaos: ${describeNavError(baseline.result.navigationError)}`,
       );
     }
 
@@ -524,6 +524,15 @@ async function safely(fn: () => Promise<void>): Promise<void> {
   } catch {
     /* page or context already closed */
   }
+}
+
+/** Playwright's raw navigation errors, translated for humans. */
+function describeNavError(raw: string): string {
+  if (/ERR_NAME_NOT_RESOLVED/.test(raw)) return "the address could not be found (DNS lookup failed).";
+  if (/ERR_CONNECTION_REFUSED/.test(raw)) return "the connection was refused. Is the server running?";
+  if (/ERR_CONNECTION_TIMED_OUT|ERR_TIMED_OUT|Timeout/.test(raw)) return "it took too long to respond.";
+  if (/ERR_CERT|ERR_SSL/.test(raw)) return "there is a problem with its TLS certificate.";
+  return raw.replace(/^page\.goto:\s*/, "").replace(/\s+at\s+https?:\/\/\S+$/, "");
 }
 
 function firstLine(err: unknown): string {
