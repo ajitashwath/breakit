@@ -17,6 +17,9 @@ export async function runOnServer(req: RunRequest, signal?: AbortSignal): Promis
     throw new RunFailed("Couldn't reach the breakit server. Is it still running?");
   }
   const body = (await res.json().catch(() => null)) as RunResponse | RunError | null;
+  if (res.status === 504) {
+    throw new RunFailed("The run took longer than this server allows (60 s). Try a lighter page or a gentler preset.");
+  }
   if (!res.ok || !body || "error" in body) {
     throw new RunFailed(body && "error" in body ? body.error : `The server answered ${res.status}.`);
   }
