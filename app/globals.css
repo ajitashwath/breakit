@@ -1,0 +1,425 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. One accent, everything else is ink on near-black.
+ * Vermilion is reserved for: the Break button, focus rings, and (later) failure.
+ */
+:root {
+  --bg: #0a0a0b;
+  --ink: #f5f5f7;
+  --ink-2: rgb(245 245 247 / 0.62);
+  --ink-3: rgb(245 245 247 / 0.36);
+  --line: rgb(255 255 255 / 0.09);
+  --accent: #ff4438;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.4;
+  letter-spacing: -0.011em;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(255 68 56 / 0.35);
+}
+
+/* In the base layer so Tailwind utilities (text-ink-2, font-medium…) can override it. */
+@layer base {
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+}
+
+/* ------------------------------------------------------------------ URL */
+
+.url-field {
+  position: relative;
+  width: 100%;
+}
+.url-field::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  transform: translateX(-50%);
+  background: var(--line);
+  transition:
+    background 0.4s var(--ease),
+    width 0.6s var(--ease);
+}
+.url-field:focus-within::after {
+  background: rgb(255 255 255 / 0.3);
+}
+.url-input {
+  display: block;
+  width: 100%;
+  padding: 0 0 0.22em;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  text-align: center;
+  color: var(--ink);
+  caret-color: var(--accent);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  transition: font-size 0.25s var(--ease);
+}
+.url-input::placeholder {
+  color: rgb(245 245 247 / 0.2);
+}
+
+/* --------------------------------------------------------------- reveal */
+
+/* Height animates via grid rows, so the centred block grows and the URL field
+   glides up instead of jumping. */
+.reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    grid-template-rows 0.8s var(--ease),
+    opacity 0.5s ease,
+    transform 0.8s var(--ease);
+}
+.reveal[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: none;
+  transition-delay: 0s, 0.12s, 0s;
+}
+.reveal-inner {
+  min-height: 0;
+  overflow: hidden;
+  /* room for thumb shadows and focus rings that would otherwise be clipped */
+  padding: 0 16px;
+  margin: 0 -16px;
+}
+@media (min-width: 1024px) {
+  /* also leaves room for the preset row, which runs wider than the sliders */
+  .reveal-inner {
+    padding: 0 72px;
+    margin: 0 -72px;
+  }
+}
+
+/* --------------------------------------------------------------- chips */
+
+.chip {
+  padding: 7px 8px;
+  border-radius: 999px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  transition:
+    color 0.25s ease,
+    background 0.25s ease;
+}
+@media (min-width: 1024px) {
+  .chip {
+    padding: 7px 14px;
+  }
+}
+.chip:hover {
+  color: var(--ink);
+}
+.chip[aria-pressed="true"] {
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.1);
+}
+.chip:focus-visible,
+.text-btn:focus-visible {
+  outline: 2px solid rgb(255 68 56 / 0.6);
+  outline-offset: 2px;
+}
+.text-btn {
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: rgb(245 245 247 / 0.25);
+  text-underline-offset: 3px;
+  transition: color 0.2s ease;
+}
+.text-btn:hover {
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- rows */
+
+.chaos-row {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr) 124px;
+  align-items: center;
+  column-gap: 20px;
+  min-height: 52px;
+}
+.chaos-label {
+  color: var(--ink-2);
+}
+.chaos-value {
+  font-size: 24px;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  transition: color 0.3s ease;
+}
+.chaos-value[data-off="true"] {
+  color: var(--ink-3);
+}
+
+@media (max-width: 560px) {
+  .chaos-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "label value"
+      "slider slider";
+    row-gap: 2px;
+    padding: 10px 0 6px;
+  }
+  .chaos-row > label {
+    grid-area: label;
+  }
+  .chaos-row > output {
+    grid-area: value;
+  }
+  .chaos-row > input {
+    grid-area: slider;
+  }
+}
+
+/* -------------------------------------------------------------- slider */
+
+/*
+ * A real <input type=range> (keyboard, screen readers and touch for free),
+ * skinned so it reads as a native macOS control: hairline track that fills
+ * with ink, and a white thumb that lifts slightly under the pointer.
+ * --r is the 0..1 position, set from React; the fill stops at the thumb's
+ * centre, which is why the stop is offset by half the thumb width.
+ */
+.chaos-slider {
+  --thumb: 24px;
+  --track-h: 4px;
+  --stop: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--r, 0));
+  --track-bg: linear-gradient(
+    to right,
+    rgb(245 245 247 / 0.92) var(--stop),
+    rgb(255 255 255 / 0.12) var(--stop)
+  );
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  touch-action: pan-y;
+}
+.chaos-slider::-webkit-slider-runnable-track {
+  height: var(--track-h);
+  border-radius: 999px;
+  background: var(--track-bg);
+}
+.chaos-slider::-moz-range-track {
+  height: var(--track-h);
+  border-radius: 999px;
+  background: var(--track-bg);
+}
+.chaos-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((var(--track-h) - var(--thumb)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.12),
+    0 1px 2px rgb(0 0 0 / 0.5),
+    0 3px 10px rgb(0 0 0 / 0.35);
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.25s ease;
+}
+.chaos-slider::-moz-range-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.12),
+    0 1px 2px rgb(0 0 0 / 0.5),
+    0 3px 10px rgb(0 0 0 / 0.35);
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.25s ease;
+}
+.chaos-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.06);
+}
+.chaos-slider:active::-webkit-slider-thumb {
+  transform: scale(1.14);
+}
+.chaos-slider:hover::-moz-range-thumb {
+  transform: scale(1.06);
+}
+.chaos-slider:active::-moz-range-thumb {
+  transform: scale(1.14);
+}
+.chaos-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 4px rgb(255 68 56 / 0.4),
+    0 1px 2px rgb(0 0 0 / 0.5);
+}
+.chaos-slider:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 4px rgb(255 68 56 / 0.4),
+    0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+/* --------------------------------------------------------------- button */
+
+.break-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 30px 0 26px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  transition:
+    transform 0.25s var(--ease),
+    box-shadow 0.35s ease,
+    filter 0.25s ease,
+    opacity 0.3s ease;
+}
+.break-btn .skull {
+  font-size: 19px;
+  line-height: 1;
+  transition: transform 0.4s var(--ease);
+}
+.break-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 10px 36px -8px rgb(255 68 56 / 0.55);
+}
+.break-btn:hover:not(:disabled) .skull {
+  transform: rotate(-8deg) scale(1.08);
+}
+.break-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.break-btn:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 0.85);
+  outline-offset: 3px;
+}
+.break-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------- misc */
+
+.fade-in {
+  animation: fade-in 1.1s var(--ease) both;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+/* ------------------------------------------------------- run + report */
+
+.breathe {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(245 245 247 / 0.5) 50%,
+    transparent
+  );
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  background-color: var(--line);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+@keyframes breathe {
+  0% {
+    background-position: -60% 0;
+  }
+  100% {
+    background-position: 160% 0;
+  }
+}
+
+.rise {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.9s var(--ease),
+    transform 0.9s var(--ease);
+}
+.rise[data-in="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.shot {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgb(255 255 255 / 0.02);
+}
