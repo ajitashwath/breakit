@@ -1,13 +1,7 @@
-# breakit
-
-Website chaos engineering. Point it at a URL, turn up the failure, see what survives.
-
-> Status: engine, report generator, config screen, synchronous run API and report view
-> work end to end. Not built yet: live WebSocket stream, request waterfall, dependency
-> graph, CLI.
+# BreakIt
+Point it at a URL, turn up the failure, see what survives.
 
 ## Run the app
-
 ```bash
 npm install
 npx playwright-core install chromium
@@ -22,7 +16,6 @@ The survival % is a documented heuristic, not a measurement: see `lib/chaos/repo
 `npm run verify:report` pins down its edge cases.
 
 ## Try the engine
-
 ```bash
 npm install
 npx playwright-core install chromium
@@ -38,7 +31,6 @@ npm run engine -- https://example.com --latency 800 --loss 10 --api 50
 Presets: `3g`, `terrible_wifi`, `api_outage`, `third_party_apocalypse`, `everything_is_slow`.
 
 ## How the engine works
-
 `lib/chaos/engine.ts` launches one Chromium and runs three passes in separate contexts:
 an unrecorded warm-up (so cold DNS/TLS doesn't pollute the comparison), a baseline, and
 the chaos pass. Every context and the browser are closed in `finally`.
@@ -57,7 +49,6 @@ run, so a shared stream would fail different resources on replay. Limit: URLs th
 random cache-buster get a different identity each run and can't be replayed exactly.
 
 **Known limits, stated plainly**
-
 - Latency is added *per request* on top of real network time; it is not an RTT model.
 - Load time is one sample per pass. Treat small differences as noise.
 - The main document is protected from injected failures by default (`protectDocument`).
