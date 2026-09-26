@@ -1,4 +1,4 @@
-# BreakIt
+# Break It
 Point it at a URL, turn up the failure, see what survives.
 
 ## Run the app
